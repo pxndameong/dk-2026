@@ -99,18 +99,18 @@ $$X_{\text{norm}, i} = \frac{X_{:, i} - \text{lo}_i}{\text{hi}_i - \text{lo}_i}$
 ### 3.2 Fungsi Basis Spasial RBF (Wendland $C^2$)
 
 Untuk menangkap variasi spasial lokal dan non-stasioneritas, dibangun basis RBF berdukungan kompak (*compact support*) Wendland $C^2$ pada 3 tingkat gridding resolusi spasial:
-$$\text{NUM\_BASIS} = [4^2, 8^2, 16^2] = [16, 64, 256] \quad (\text{Total } 336 \text{ basis sebelum pangkas})$$
+$$\text{NUM}_{\text{BASIS}} = [4^2, 8^2, 16^2] = [16, 64, 256] \quad (\text{Total } 336 \text{ basis sebelum pangkas})$$
 
 #### Parameter & Formula Wendland $C^2$:
 1. **Normalisasi Koordinat Spasial**:
-   $$\text{norm\_lon} = \frac{\text{lon} - \min(\text{lon}_{\text{obs}})}{\max(\text{lon}_{\text{obs}}) - \min(\text{lon}_{\text{obs}})}, \quad \text{norm\_lat} = \frac{\text{lat} - \min(\text{lat}_{\text{obs}})}{\max(\text{lat}_{\text{obs}}) - \min(\text{lat}_{\text{obs}})}$$
+   $$\text{norm}_{\text{lon}} = \frac{\text{lon} - \min(\text{lon}_{\text{obs}})}{\max(\text{lon}_{\text{obs}}) - \min(\text{lon}_{\text{obs}})}, \quad \text{norm}_{\text{lat}} = \frac{\text{lat} - \min(\text{lat}_{\text{obs}})}{\max(\text{lat}_{\text{obs}}) - \min(\text{lat}_{\text{obs}})}$$
 
 2. **Parameter Jangkauan (Scale / Bandwidth $\theta$)**:
    Untuk setiap resolusi $n \in \{16, 64, 256\}$:
    $$\theta = \frac{1}{\sqrt{n} \times 2.5}$$
 
 3. **Jarak Terbobot (Scalability Distance $d$)**:
-   $$d_i = \frac{\sqrt{(\text{norm\_lon} - x_k)^2 + (\text{norm\_lat} - y_k)^2}}{\theta}$$
+   $$d_i = \frac{\sqrt{(\text{norm}_{\text{lon}} - x_k)^2 + (\text{norm}_{\text{lat}} - y_k)^2}}{\theta}$$
 
 4. **Fungsi Basis Wendland $C^2$**:
    $$\phi_i(d) = \begin{cases} \frac{(1 - d)^6 (35 d^2 + 18 d + 3)}{3}, & \text{jika } 0 \le d \le 1 \\ 0, & \text{lainnya} \end{cases}$$
@@ -140,7 +140,7 @@ Titik yang cocok dipisahkan ke `df_test`, sedangkan sisa titik dijadikan `df_tra
 
 | Layer / Komponen | Tipe Layer / Fungsi | Konfigurasi / Hyperparameter | Tujuan & Keterangan |
 | :--- | :--- | :--- | :--- |
-| **Input Feature Stack** | Concatenation | $X = [X_{\text{covariates\_norm}}, \Phi_{\text{rbf\_train}}]$ | Memadukan fitur atmosferik & basis spasial |
+| **Input Feature Stack** | Concatenation | $X = [X_{\text{covariates}_{\text{norm}}}, \Phi_{\text{rbf}_{\text{train}}}]$ | Memadukan fitur atmosferik & basis spasial |
 | **Layer 1** | `Dense` | 64 unit, Aktivasi `ReLU`, `he_uniform` | Feature extraction non-linear awal |
 | **Regularisasi 1** | `l2(0.001)` | $L_2$ weight penalty | Mencegah overfitting |
 | **Batch Normalization** | `BatchNormalization` | Default Keras settings | Menstabilkan distribusi gradien antar epoch |
