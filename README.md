@@ -544,22 +544,30 @@ $$
 
 ---
 
-### 6.3 Ringkasan Transformasi Data dari Input ke Output
+### 6.3 Ringkasan Transformasi Data dari Input ke Output (Node Grid #165 Asli)
 
 ```
-[Input Observasi] -> y0 = 350.0 mm
-                     X_olr = 215.4 W/m²
+[3 Stasiun Observasi Berdekatan] -> Stasiun A (420.0 mm), Stasiun B (395.0 mm), Stasiun C (414.0 mm)
        │
-       ▼ (Langkah 2: Scaling)
-[Nilai Scaled]    -> y_scaled = 0.7000
-                     X_norm = 0.3540
+       ▼ (Langkah 1: Scipy KDTree Matching & Agregasi Rerata)
+[Data Padan Node #165]         -> lat = -8.25, lon = 111.50
+                                   olr = 16702640 W/m²
+                                   monthly_rainfall = 409.67 mm  (DF_PADAN_1_2014.csv)
        │
-       ▼ (Langkah 3: RBF Wendland C2)
-[Feature Stack]   -> X_final = [0.3540, 0.2457, ...]
+       ▼ (Langkah 1: Masking Spasial)
+[Alokasi Subset]               -> (111.50, -8.25) not in points_to_remove ==> Data Training (df_train)
        │
-       ▼ (Langkah 4: Forward Pass DNN)
-[Output Model]    -> y_hat_scaled = 0.6800
+       ▼ (Langkah 2: Min-Max Kovariat & Target Scaling)
+[Nilai Scaled (0-1)]           -> y_scaled = 409.67 / 500.0 = 0.8193
+                                   X_norm = (16702640 - lo) / (hi - lo) = 0.3540
        │
-       ▼ (Langkah 4: Rescaling Output)
-[Hasil Akhir]     -> y_pred = 340.0 mm  (Eror: 10.0 mm)
+       ▼ (Langkah 3: RBF Wendland C2 Multi-Resolusi)
+[Spatial Feature Stack]        -> Phi_rbf = [phi_1=0.0000 (Knot 1 Jauh), ..., phi_6=0.2457 (Knot 6 Dekat)]
+                                   X_final = [0.3540, 0.0000, ..., 0.2457, ...] (Ukuran: 1 x 337)
+       │
+       ▼ (Langkah 4: Forward Pass Jaringan Saraf Tiruan DNN)
+[Output Rasio DNN]             -> y_hat_scaled = Model.predict(X_final) = 0.8000
+       │
+       ▼ (Langkah 4: Rescaling Target Output)
+[Hasil Prediksi mm]            -> y_pred = 0.8000 * 500.0 = 400.0 mm  (Eror: 9.67 mm)
 ```
