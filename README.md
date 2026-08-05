@@ -135,7 +135,9 @@ Variabel yang diekstrak dari dataset bulanan ERA5 (`EKSOGEN_COLS`):
 
 Setiap fitur eksogen $X_{:, i}$ dinormalisasi berdasarkan nilai minimum ($\text{lo}$) dan maksimum ($\text{hi}$) pada data *training*:
 
-$$X_{\text{norm}, i} = \frac{X_{:, i} - \text{lo}_i}{\text{hi}_i - \text{lo}_i}$$
+$$
+X_{\text{norm}, i} = \frac{X_{:, i} - \text{lo}_i}{\text{hi}_i - \text{lo}_i}
+$$
 
 ---
 
@@ -143,27 +145,37 @@ $$X_{\text{norm}, i} = \frac{X_{:, i} - \text{lo}_i}{\text{hi}_i - \text{lo}_i}$
 
 Untuk menangkap variasi spasial lokal dan non-stasioneritas, dibangun basis RBF berdukungan kompak (*compact support*) Wendland $C^2$ pada 3 tingkat gridding resolusi spasial:
 
-$$\text{NUM}_{\text{basis}} = [4^2, 8^2, 16^2] = [16, 64, 256] \quad (\text{Total 336 basis sebelum pangkas})$$
+$$
+\text{NUM}_{\text{basis}} = [4^2, 8^2, 16^2] = [16, 64, 256] \quad (\text{Total 336 basis sebelum pangkas})
+$$
 
 #### Parameter & Formula Wendland $C^2$:
 
 **1. Normalisasi Koordinat Spasial**:
 
-$$\text{norm}_{\text{lon}} = \frac{\text{lon} - \min(\text{lon}_{\text{obs}})}{\max(\text{lon}_{\text{obs}}) - \min(\text{lon}_{\text{obs}})}, \quad \text{norm}_{\text{lat}} = \frac{\text{lat} - \min(\text{lat}_{\text{obs}})}{\max(\text{lat}_{\text{obs}}) - \min(\text{lat}_{\text{obs}})}$$
+$$
+\text{norm}_{\text{lon}} = \frac{\text{lon} - \min(\text{lon}_{\text{obs}})}{\max(\text{lon}_{\text{obs}}) - \min(\text{lon}_{\text{obs}})}, \quad \text{norm}_{\text{lat}} = \frac{\text{lat} - \min(\text{lat}_{\text{obs}})}{\max(\text{lat}_{\text{obs}}) - \min(\text{lat}_{\text{obs}})}
+$$
 
 **2. Parameter Jangkauan (Scale / Bandwidth $\theta$)**:
 
 Untuk setiap resolusi $n \in \{16, 64, 256\}$:
 
-$$\theta = \frac{1}{\sqrt{n} \times 2.5}$$
+$$
+\theta = \frac{1}{\sqrt{n} \times 2.5}
+$$
 
 **3. Jarak Terbobot (Scalability Distance $d$)**:
 
-$$d_i = \frac{\sqrt{(\text{norm}_{\text{lon}} - x_k)^2 + (\text{norm}_{\text{lat}} - y_k)^2}}{\theta}$$
+$$
+d_i = \frac{\sqrt{(\text{norm}_{\text{lon}} - x_k)^2 + (\text{norm}_{\text{lat}} - y_k)^2}}{\theta}
+$$
 
 **4. Fungsi Basis Wendland $C^2$**:
 
-$$\phi_i(d) = \begin{cases} \frac{(1 - d)^6 (35 d^2 + 18 d + 3)}{3}, & \text{jika } 0 \le d \le 1 \\ 0, & \text{lainnya} \end{cases}$$
+$$
+\phi_i(d) = \begin{cases} \frac{(1 - d)^6 (35 d^2 + 18 d + 3)}{3}, & \text{jika } 0 \le d \le 1 \\ 0, & \text{lainnya} \end{cases}
+$$
 
 Fungsi basis yang bernilai $0$ di seluruh domain dieliminasi untuk efisiensi komputasi.
 
@@ -210,13 +222,19 @@ Titik yang cocok dipisahkan ke `df_test`, sedangkan sisa titik dijadikan `df_tra
 
 Target curah hujan dinormalisasi:
 
-$$y_{\text{train}} = \frac{y_{\text{train0}}}{Y_{\text{max}}}, \quad Y_{\text{max}} = \max(y_{\text{train0}})$$
+$$
+y_{\text{train}} = \frac{y_{\text{train0}}}{Y_{\text{max}}}, \quad Y_{\text{max}} = \max(y_{\text{train0}})
+$$
 
 Pada saat pencatatan sejarah *history*, metrik dikembalikan ke satuan asli (mm):
 
-$$\text{MAE}_{\text{asli}} = \text{MAE}_{\text{scaled}} \times Y_{\text{max}}$$
+$$
+\text{MAE}_{\text{asli}} = \text{MAE}_{\text{scaled}} \times Y_{\text{max}}
+$$
 
-$$\text{Loss}_{\text{asli}} = \text{Loss}_{\text{scaled}} \times Y_{\text{max}}^2$$
+$$
+\text{Loss}_{\text{asli}} = \text{Loss}_{\text{scaled}} \times Y_{\text{max}}^2
+$$
 
 ---
 
@@ -263,11 +281,11 @@ Bayangkan kita memiliki satu lokasi stasiun observasi curah hujan di Jakarta (St
 | Parameter / Fitur | Variabel / Simbol | Nilai Contoh | Keterangan & Satuan |
 | :--- | :--- | :--- | :--- |
 | **Lokasi Stasiun A** | $(\text{Lon}, \text{Lat})$ | $(106.50^\circ, -6.25^\circ)$ | Koordinat geografis lokasi observasi |
-| **Curah Hujan Asli** | $y_0$ | $350.0 \text{ mm}$ | Total curah hujan bulanan observasi |
-| **Nilai OLR ERA5** | $X_{\text{olr}}$ | $215.4 \text{ W/m}^2$ | Radiasi OLR pada grid terdekat stasiun |
-| **Batas Minimum OLR** | $\text{lo}$ | $180.0 \text{ W/m}^2$ | Nilai OLR terkecil pada subset *training* |
-| **Batas Maksimum OLR** | $\text{hi}$ | $280.0 \text{ W/m}^2$ | Nilai OLR terbesar pada subset *training* |
-| **Maksimum Curah Hujan** | $Y_{\text{max}}$ | $500.0 \text{ mm}$ | Curah hujan tertinggi pada data *training* |
+| **Curah Hujan Asli** | $y_0$ | $350.0\text{ mm}$ | Total curah hujan bulanan observasi |
+| **Nilai OLR ERA5** | $X_{\text{olr}}$ | $215.4\text{ W/m}^2$ | Radiasi OLR pada grid terdekat stasiun |
+| **Batas Minimum OLR** | $\text{lo}$ | $180.0\text{ W/m}^2$ | Nilai OLR terkecil pada subset *training* |
+| **Batas Maksimum OLR** | $\text{hi}$ | $280.0\text{ W/m}^2$ | Nilai OLR terbesar pada subset *training* |
+| **Maksimum Curah Hujan** | $Y_{\text{max}}$ | $500.0\text{ mm}$ | Curah hujan tertinggi pada data *training* |
 
 ---
 
@@ -284,76 +302,70 @@ flowchart LR
 ---
 
 #### Langkah 1: Pairing Spasial (KDTree) & Masking Testing Set
-* **Konsep**: Koordinat stasiun observasi jarang sekali tepat berada di titik grid ERA5. Algoritma KDTree mencari koordinat grid ERA5 yang memiliki jarak terkecil (tetangga terdekat).
-* **Perhitungan Jarak Euclidean**:
-  $$\text{Jarak} = \sqrt{(\text{Lon}_{\text{obs}} - \text{Lon}_{\text{grid}})^2 + (\text{Lat}_{\text{obs}} - \text{Lat}_{\text{grid}})^2}$$
-  Hasil dipasangkan ke Grid ERA5 #102.
-* **Pengecekan Masking**:
-  Koordinat Stasiun A $(106.50, -6.25)$ diperiksa terhadap daftar 9 koordinat uji (`points_to_remove`).
-  $$\text{Kondisi: } (106.50, -6.25) \in \text{points\_to\_remove} \implies \mathbf{\text{TERDETEKSI!}}$$
-* **Hasil Tahap 1**: Stasiun A dipisahkan ke kelompok **`df_test`** (Data Testing).
+- **Konsep**: Koordinat stasiun observasi jarang sekali tepat berada di titik grid ERA5. Algoritma KDTree mencari koordinat grid ERA5 yang memiliki jarak terkecil (tetangga terdekat).
+- **Perhitungan Jarak Euclidean**:  
+  $\text{Jarak} = \sqrt{(\text{Lon}_{\text{obs}} - \text{Lon}_{\text{grid}})^2 + (\text{Lat}_{\text{obs}} - \text{Lat}_{\text{grid}})^2}$  
+  *(Hasil dipasangkan ke Grid ERA5 #102)*.
+- **Pengecekan Masking**:  
+  Koordinat Stasiun A $(106.50, -6.25)$ diperiksa terhadap daftar 9 koordinat uji (`points_to_remove`):  
+  $\text{Kondisi: } (106.50, -6.25) \in \text{points\_to\_remove} \implies \mathbf{\text{TERDETEKSI!}}$
+- **Hasil Tahap 1**: Stasiun A dipisahkan ke kelompok `df_test` (Data Testing).
 
 ---
 
 #### Langkah 2: Scaling Target Curah Hujan & Min-Max Kovariat OLR
-* **Konsep**: Neural Network bekerja paling baik ketika input dan target berada pada skala kecil (sekitar $0$ sampai $1$).
+- **Konsep**: Neural Network bekerja paling baik ketika input dan target berada pada skala numerik kecil $[0, 1]$.
 
-1. **Scaling Target Curah Hujan ($y_{\text{scaled}}$)**:
-   $$y_{\text{scaled}} = \frac{y_0}{Y_{\text{max}}} = \frac{350.0 \text{ mm}}{500.0 \text{ mm}} = \mathbf{0.7000}$$
-   *(Artinya: curah hujan stasiun ini adalah 70% dari nilai maksimum curah hujan wilayah).*
+1. **Scaling Target Curah Hujan ($y_{\text{scaled}}$)**:  
+   $y_{\text{scaled}} = \frac{y_0}{Y_{\text{max}}} = \frac{350.0\text{ mm}}{500.0\text{ mm}} = \mathbf{0.7000}$  
+   *(Artinya: curah hujan stasiun ini adalah 70% dari nilai maksimum wilayah)*.
 
-2. **Min-Max Normalization Kovariat OLR ($X_{\text{norm}}$)**:
-   $$X_{\text{norm}} = \frac{X_{\text{olr}} - \text{lo}}{\text{hi} - \text{lo}} = \frac{215.4 - 180.0}{280.0 - 180.0} = \frac{35.4}{100.0} = \mathbf{0.3540}$$
-   *(Artinya: OLR berada pada tingkat 35.4% dari rentang variasi historisnya).*
+2. **Min-Max Normalization Kovariat OLR ($X_{\text{norm}}$)**:  
+   $X_{\text{norm}} = \frac{X_{\text{olr}} - \text{lo}}{\text{hi} - \text{lo}} = \frac{215.4 - 180.0}{280.0 - 180.0} = \frac{35.4}{100.0} = \mathbf{0.3540}$  
+   *(Artinya: OLR berada pada tingkat 35.4% dari rentang variasi historisnya)*.
 
 ---
 
 #### Langkah 3: Perhitungan Fungsi Basis Spasial RBF (Wendland $C^2$)
-* **Konsep**: Basis RBF bertindak sebagai 'jaring-jaring spasial' untuk menangkap pola pola lokal di Pulau Jawa pada 3 tingkat kedalaman/resolusi ($4 \times 4$, $8 \times 8$, $16 \times 16$).
+- **Konsep**: Basis RBF bertindak sebagai 'jaring-jaring spasial' untuk menangkap pola pola lokal di Pulau Jawa pada 3 tingkat resolusi ($4 \times 4$, $8 \times 8$, $16 \times 16$).
 
 Misalkan kita menghitung nilai salah satu *knot* basis pada resolusi $4 \times 4$ ($n = 16$):
 
-1. **Hitung Parameter Bandwidth ($\theta$)**:
-   $$\theta = \frac{1}{\sqrt{n} \times 2.5} = \frac{1}{\sqrt{16} \times 2.5} = \frac{1}{4 \times 2.5} = \mathbf{0.10}$$
+1. **Hitung Parameter Bandwidth ($\theta$)**:  
+   $\theta = \frac{1}{\sqrt{n} \times 2.5} = \frac{1}{\sqrt{16} \times 2.5} = \frac{1}{4 \times 2.5} = \mathbf{0.10}$
 
-2. **Hitung Jarak Terbobot ke Pusat Knot ($d$)**:
-   Jika jarak koordinat ter-skala stasiun ke pusat knot tersebut adalah $0.04$:
-   $$d = \frac{\text{Jarak Spasial}}{\theta} = \frac{0.04}{0.10} = \mathbf{0.40} \quad (\text{karena } 0 \le d \le 1, \text{maka basis aktif})$$
+2. **Hitung Jarak Terbobot ke Pusat Knot ($d$)**:  
+   Jika jarak koordinat ter-skala stasiun ke pusat knot tersebut adalah $0.04$:  
+   $d = \frac{\text{Jarak Spasial}}{\theta} = \frac{0.04}{0.10} = \mathbf{0.40} \quad (\text{karena } 0 \le d \le 1, \text{maka basis aktif})$
 
-3. **Hitung Nilai Basis Wendland $C^2$ ($\phi(d)$)**:
-   $$\phi(0.40) = \frac{(1 - 0.40)^6 \times \left(35(0.40)^2 + 18(0.40) + 3\right)}{3}$$
-   $$\phi(0.40) = \frac{(0.60)^6 \times (5.60 + 7.20 + 3.00)}{3}$$
-   $$\phi(0.40) = \frac{0.046656 \times 15.80}{3} = \frac{0.7371648}{3} \approx \mathbf{0.2457}$$
+3. **Hitung Nilai Basis Wendland $C^2$ ($\phi(d)$)**:  
+   $\phi(0.40) = \frac{(1 - 0.40)^6 \times (35(0.40)^2 + 18(0.40) + 3)}{3} = \frac{0.046656 \times 15.80}{3} \approx \mathbf{0.2457}$
 
-* **Bentuk Vector Fitur Final ($X_{\text{final}}$)**:
-  Matriks input yang disiapkan untuk dimasukkan ke DNN adalah gabungan dari kovariat OLR ter-skala dan seluruh basis RBF aktif:
-  $$X_{\text{final}} = [X_{\text{norm}}, \phi_1, \phi_2, \dots, \phi_{336}] = [\mathbf{0.3540}, \mathbf{0.2457}, \dots]$$
+- **Bentuk Vector Fitur Final ($X_{\text{final}}$)**:  
+  $X_{\text{final}} = [X_{\text{norm}}, \phi_1, \phi_2, \dots, \phi_{336}] = [\mathbf{0.3540}, \mathbf{0.2457}, \dots]$
 
 ---
 
 #### Langkah 4: Prediksi Neural Network & Rescaling Output Curah Hujan
-1. Vektor fitur $X_{\text{final}}$ diumpankan ke model Sequential DNN (Dense 64 $\rightarrow$ BN $\rightarrow$ Drop $\rightarrow$ Dense 32 $\rightarrow$ Drop $\rightarrow$ Dense 16 $\rightarrow$ Dense 1).
-2. Model mengembalikan hasil prediksi ter-skala:
-   $$\hat{y}_{\text{scaled}} = \mathbf{0.6800}$$
-3. **Rescaling ke Satuan Fisik Asli (mm)**:
-   $$y_{\text{pred}} = \hat{y}_{\text{scaled}} \times Y_{\text{max}} = 0.6800 \times 500.0 \text{ mm} = \mathbf{340.0 \text{ mm}}$$
-4. **Evaluasi Selisih**:
-   $$\text{Eror Prediksi} = |y_0 - y_{\text{pred}}| = |350.0 \text{ mm} - 340.0 \text{ mm}| = \mathbf{10.0 \text{ mm}}$$
+1. Vektor fitur $X_{\text{final}}$ diumpankan ke model Sequential DNN.
+2. Model mengembalikan hasil prediksi ter-skala:  
+   $\hat{y}_{\text{scaled}} = \mathbf{0.6800}$
+3. **Rescaling ke Satuan Fisik Asli (mm)**:  
+   $y_{\text{pred}} = \hat{y}_{\text{scaled}} \times Y_{\text{max}} = 0.6800 \times 500.0\text{ mm} = \mathbf{340.0\text{ mm}}$
+4. **Evaluasi Selisih**:  
+   $\text{Eror Prediksi} = |y_0 - y_{\text{pred}}| = |350.0\text{ mm} - 340.0\text{ mm}| = \mathbf{10.0\text{ mm}}$
 
 ---
 
 #### Langkah 5: Penyesuaian Satuan Metrik Evaluasi (MAE & Loss)
 Saat proses fitting model, Keras mencatat metrik dalam skala ter-skala ($0-1$). Pada akhir epoch, skrip mengonversinya kembali ke satuan fisik asli untuk dicatat di `HISTORY_METRICS_1_2014.csv`.
 
-* **Jika Metrik Scaled pada Epoch Terakhir**:
-  * $\text{MAE}_{\text{scaled}} = 0.0200$
-  * $\text{Loss}_{\text{scaled}} = 0.0006$
-
-* **Konversi ke Satuan Fisik**:
-  1. **MAE Asli (mm)**:
-     $$\text{MAE}_{\text{asli}} = \text{MAE}_{\text{scaled}} \times Y_{\text{max}} = 0.0200 \times 500.0 \text{ mm} = \mathbf{10.0 \text{ mm}}$$
-  2. **Loss MSE Asli ($\text{mm}^2$)**:
-     $$\text{Loss}_{\text{asli}} = \text{Loss}_{\text{scaled}} \times (Y_{\text{max}})^2 = 0.0006 \times (500.0 \text{ mm})^2 = 0.0006 \times 250000 = \mathbf{150.0 \text{ mm}^2}$$
+- **Metrik Scaled Epoch Terakhir**: $\text{MAE}_{\text{scaled}} = 0.0200$, $\text{Loss}_{\text{scaled}} = 0.0006$
+- **Konversi ke Satuan Fisik**:
+  1. **MAE Asli (mm)**:  
+     $\text{MAE}_{\text{asli}} = \text{MAE}_{\text{scaled}} \times Y_{\text{max}} = 0.0200 \times 500.0\text{ mm} = \mathbf{10.0\text{ mm}}$
+  2. **Loss MSE Asli ($\text{mm}^2$)**:  
+     $\text{Loss}_{\text{asli}} = \text{Loss}_{\text{scaled}} \times (Y_{\text{max}})^2 = 0.0006 \times (500.0\text{ mm})^2 = 0.0006 \times 250000 = \mathbf{150.0\text{ mm}^2}$
 
 ---
 
@@ -376,4 +388,3 @@ Saat proses fitting model, Keras mencatat metrik dalam skala ter-skala ($0-1$). 
        ▼ (Langkah 4: Rescaling Output)
 [Hasil Akhir]     -> y_pred = 340.0 mm  (Eror: 10.0 mm)
 ```
-
