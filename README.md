@@ -21,39 +21,74 @@ Melakukan interpolasi spasial dan prediksi curah hujan bulanan (*monthly rainfal
 
 ## 2. Alur Eksekusi & Flowchart (Mermaid Diagrams)
 
+Legenda Bentuk Standar Flowchart:
+- **Oval / Stadium `([])`**: Terminal Start / Stop (Mulai / Selesai).
+- **Jajar Genjang `[/ /]`**: Input / Output Data dan Berkas.
+- **Persegi Panjang `[ ]`**: Proses Komputasi / Pemrosesan Data.
+- **Belah Ketupat `{" "}`**: Keputusan / Percabangan Logika (*Decision*).
+
 ### 2.1 Alur Pemrosesan Data & Pipeline Eksekusi (End-to-End)
 
 ```mermaid
 flowchart TD
-    A["Mulai Pipeline<br/>run_for_month"] --> B["Memuat Data<br/>Observasi & ERA5"]
-    B --> C["Spatial Pairing via KDTree<br/>(Match Stasiun ke Grid ERA5)"]
-    C --> D["Grouping & Agregasi Observasi<br/>per Grid Node"]
-    D --> E["Export<br/>DF_PADAN_month_year.csv"]
+    A(["Start / Mulai Pipeline<br/>run_for_month(YEAR, MONTH)"]) --> B[/"Input Data:<br/>Data Observasi & Excel ERA5<br/>EKSOGEN_COLS: lat, lon, olr"/]
+    B --> C["Spatial Pairing via KDTree:<br/>Match Stasiun (long, lat) ke Grid (lon, lat)"]
+    C --> D["Grouping & Agregasi Observasi:<br/>df_rain = df_obs.groupby('neighbor').mean()"]
+    D --> E[/"Output File CSV:<br/>DF_PADAN_month_year.csv"/]
     
-    E --> F{"Pemisahan Data<br/>(Masking Points)"}
-    F -->|"Match 9 Points"| G["Data Testing<br/>df_test"]
-    F -->|"Sisa Titik"| H["Data Training<br/>df_train"]
+    E --> F{"Pemisahan Data Spasial?<br/>(lon, lat) in points_to_remove"}
+    F -->|"Ya (9 Titik)"| G[/"Data Testing:<br/>df_test"/]
+    F -->|"Tidak"| H[/"Data Training:<br/>df_train"/]
     
-    H --> I["Normalisasi Min-Max<br/>Variabel Eksogen ERA5"]
-    H --> J["Konstruksi RBF Basis<br/>Wendland C2 Multi-Resolusi"]
+    H --> I["Min-Max Scaling Kovariat:<br/>X_norm = (X - lo) / (hi - lo)"]
+    H --> J["Konstruksi Basis RBF Wendland C2:<br/>phi(d) = (1-d)^6 * (35d^2 + 18d + 3)/3<br/>theta = 1 / (sqrt(n) * 2.5)"]
     
-    I & J --> K["Penggabungan Feature Stack:<br/>X = Covariates + RBF Basis"]
-    K --> L["Normalisasi Skala Target:<br/>y_scaled = y / Y_max"]
+    I & J --> K["Concatenate Feature Stack:<br/>X = [X_cov_norm, Phi_rbf]"]
+    K --> L["Scaling Target Curah Hujan:<br/>y_scaled = y / Y_max, Y_max = max(y_train)"]
     
-    L --> M["Inisialisasi Model<br/>Sequential DNN"]
-    M --> N["Loop Fitting Model<br/>Epoch-by-Epoch"]
+    L --> M["Inisialisasi Model Sequential DNN:<br/>Dense(64) -> BN -> Drop(0.3) -> Dense(32)<br/>-> Drop(0.2) -> Dense(16) -> Dense(1)"]
+    M --> N["Loop Training Epoch-by-Epoch:<br/>Fit Adam(lr=0.0005), Loss=MSE"]
     
-    N --> O{"Kriteria Henti:<br/>Epoch >= 10000<br/>ATAU MAE <= Target"}
-    O -->|"Belum Tercapai"| N
-    O -->|"Tercapai"| P["Simpan File Metrics CSV<br/>& Curve PNG"]
+    N --> O{"Kriteria Henti Loop?<br/>epoch >= 10000<br/>atau MAE_scaled <= 0.000002"}
+    O -->|"Belum"| N
+    O -->|"Tercapai"| P[/"Output Files:<br/>HISTORY_METRICS_month_year.csv<br/>METRICS_CURVE_month_year.png<br/>(MAE_asli = MAE * Y_max, Loss_asli = Loss * Y_max^2)"/]
     
-    P --> Q["Prediksi pada Seluruh Grid<br/>ERA5 Pulau Jawa"]
-    Q --> R["Rescaling Output:<br/>Prediksi * Y_max"]
-    R --> S["Export<br/>HASIL_ch_pred_month-year.csv"]
-    S --> T["Selesai"]
+    P --> Q["Prediksi Grid ERA5 Full:<br/>y_hat = Model.predict([X_full_cov, Phi_all])"]
+    Q --> R["Rescaling Output Prediksi:<br/>ch_pred = y_hat * Y_max"]
+    R --> S[/"Output Hasil Prediksi CSV:<br/>HASIL_ch_pred_month-year.csv"/]
+    S --> T(["Stop / Selesai"])
 ```
 
-### 2.2 Arsitektur Detail Jaringan Saraf Tiruan (Deep Neural Network)
+---
+
+### 2.2 Penjelasan Rinci Setiap Tahap / Box Flowchart
+
+| Kode Node | Bentuk Simbol | Nama Tahap | Deskripsi Detail & Formula Operasi |
+| :--- | :--- | :--- | :--- |
+| **A** | Oval `([])` | **Start / Mulai** | Inisialisasi fungsi `run_for_month(YEAR, MONTH)` dengan parameter lingkungan (default: `YEAR=2014`, `MONTH=1`). Memulai sesi Keras. |
+| **B** | Jajar Genjang `[/ /]` | **Input Data** | Memuat berkas observasi `sum_bulanan_rainfall_1.txt` dan file ERA5 `processed_era5jawa_{year}_{month}.xlsx`. Ekstraksi kolom `lat`, `lon`, `olr`. |
+| **C** | Persegi Panjang `[ ]` | **KDTree Pairing** | Mencari tetangga terdekat grid ERA5 untuk setiap stasiun observasi menggunakan algoritma KDTree spasial 2D berdasarkan jarak Euclidean koordinat. |
+| **D** | Persegi Panjang `[ ]` | **Agregasi Observasi** | Mengelompokkan stasiun yang terpasang pada grid node yang sama dengan operasi rerata: `df_rain = df_obs.groupby("neighbor")[["monthly_rainfall"]].mean()`. |
+| **E** | Jajar Genjang `[/ /]` | **Export DF_PADAN** | Menyimpan dataset hasil pairing lengkap yang berisi nilai observasi dan variabel eksogen ERA5 ke berkas `DF_PADAN_{month}_{year}.csv`. |
+| **F** | Belah Ketupat `{" "}` | **Pemisahan Masking** | Evaluasi kondisi percabangan spasial: apakah koordinat $(lon, lat)$ termasuk dalam daftar 9 titik *testing* (`points_to_remove`). |
+| **G** | Jajar Genjang `[/ /]` | **Data Testing** | Subset titik yang cocok dengan 9 koordinat uji dipisahkan ke dataframe `df_test` untuk validasi independen. |
+| **H** | Jajar Genjang `[/ /]` | **Data Training** | Sisa titik observasi dipisahkan ke dataframe `df_train` sebagai data latih model. |
+| **I** | Persegi Panjang `[ ]` | **Min-Max Scaling Kovariat** | Fitur atmosferik OLR dinormalisasi ke rentang $[0, 1]$ berdasarkan nilai minimum ($\text{lo}$) dan maksimum ($\text{hi}$) data training: $X_{\text{norm}} = \frac{X - \text{lo}}{\text{hi} - \text{lo}}$. |
+| **J** | Persegi Panjang `[ ]` | **Konstruksi RBF Basis** | Pembentukan matriks basis spasial RBF Wendland $C^2$ pada 3 resolusi ($16, 64, 256$). Membuang basis yang tidak aktif ($\phi = 0$ di seluruh domain). |
+| **K** | Persegi Panjang `[ ]` | **Concatenate Features** | Penggabungan matriks kovariat eksogen ter-skala dengan matriks RBF basis menjadi matriks fitur gabungan: $X = [X_{\text{cov}_{\text{norm}}}, \Phi_{\text{rbf}}]$. |
+| **L** | Persegi Panjang `[ ]` | **Scaling Target** | Target curah hujan dinormalisasi dengan membagi terhadap nilai maksimum target training: $y_{\text{scaled}} = \frac{y}{Y_{\text{max}}}$, di mana $Y_{\text{max}} = \max(y_{\text{train0}})$. |
+| **M** | Persegi Panjang `[ ]` | **Inisialisasi Model DNN** | Membangun jaringan saraf Sequential 3 layer (64 -> 32 -> 16 -> 1) dengan aktivasi ReLU, Batch Normalization, Dropout (30%, 20%), $L_2$ regularizer (0.001), dan optimizer Adam (learning rate = 0.0005). |
+| **N** | Persegi Panjang `[ ]` | **Training Iteratif** | Fitting model epoch demi epoch dengan batch size 16. Evaluasi loss MSE & MAE pada data training dan testing. |
+| **O** | Belah Ketupat `{" "}` | **Kriteria Henti** | Pengecekan kondisi henti loop training: apakah `epochs >= 10000` ATAU `MAE_scaled <= 0.000002`. Jika belum, iterasi dilanjutkan. |
+| **P** | Jajar Genjang `[/ /]` | **Export History & Grafik** | Mengembalikan metrik ke satuan asli ($\text{MAE}_{\text{asli}} = \text{MAE}_{\text{scaled}} \times Y_{\text{max}}$, $\text{Loss}_{\text{asli}} = \text{Loss}_{\text{scaled}} \times Y_{\text{max}}^2$), menyimpannya ke `HISTORY_METRICS.csv`, dan menggambar `METRICS_CURVE.png`. |
+| **Q** | Persegi Panjang `[ ]` | **Prediksi Grid Full** | Mengumpankan seluruh koordinat grid ERA5 Pulau Jawa (beserta RBF basis full $\Phi_{\text{all}}$) ke model terlatik untuk memperoleh output rasio $\hat{y}$. |
+| **R** | Persegi Panjang `[ ]` | **Rescaling Output** | Mengalikan kembali output rasio jaringan dengan faktor skala target $Y_{\text{max}}$ untuk mendapatkan prediksi nilai curah hujan asli (mm): $\text{ch\_pred} = \hat{y} \times Y_{\text{max}}$. |
+| **S** | Jajar Genjang `[/ /]` | **Export Hasil Prediksi** | Menyimpan koordinat `longitude`, `latitude`, dan `ch_pred` ke berkas luaran akhir `HASIL_ch_pred_{month}-{year}.csv`. |
+| **T** | Oval `([])` | **Stop / Selesai** | Pipeline pemrosesan bulan selesai dengan sukses. |
+
+---
+
+### 2.3 Arsitektur Detail Jaringan Saraf Tiruan (Deep Neural Network)
 
 ```mermaid
 flowchart TD
@@ -63,17 +98,17 @@ flowchart TD
     end
 
     subgraph DNN_Layers ["Deep Neural Network Architecture"]
-        Input["Concatenated Features<br/>(Covariates + Active RBF Basis)"]
-        Dense1["Dense Layer 1<br/>(64 Units, ReLU, He Uniform, L2: 0.001)"]
+        Input["Concatenated Features<br/>X = [X_cov_norm, Phi_rbf]"]
+        Dense1["Dense Layer 1<br/>64 Units, ReLU, He Uniform<br/>Kernel Regularizer: L2(0.001)"]
         BN["Batch Normalization"]
-        Drop1["Dropout 30%"]
-        Dense2["Dense Layer 2<br/>(32 Units, ReLU, L2: 0.001)"]
-        Drop2["Dropout 20%"]
-        Dense3["Dense Layer 3<br/>(16 Units, ReLU)"]
-        Out["Output Layer<br/>(1 Unit, Linear Activation)"]
+        Drop1["Dropout (Rate = 0.3)"]
+        Dense2["Dense Layer 2<br/>32 Units, ReLU<br/>Kernel Regularizer: L2(0.001)"]
+        Drop2["Dropout (Rate = 0.2)"]
+        Dense3["Dense Layer 3<br/>16 Units, ReLU"]
+        Out["Output Layer<br/>1 Unit, Linear Activation"]
     end
 
-    YPred["Scaled Prediction<br/>y_hat"]
+    YPred["Scaled Prediction<br/>y_hat = Model(X)"]
 
     X1 & X2 --> Input
     Input --> Dense1
@@ -94,7 +129,7 @@ flowchart TD
 Variabel yang diekstrak dari dataset bulanan ERA5 (`EKSOGEN_COLS`):
 1. **`lat`**: Garis Lintang
 2. **`lon`**: Garis Bujur
-3. **`olr`**: Outgoing Longwave Radiation
+3. **`olr`**: Outgoing Longwave Radiation ($\text{W/m}^2$)
 
 **Skala Normalisasi (Min-Max)**:
 
@@ -211,3 +246,68 @@ Setiap eksekusi akan menyimpan berkas luaran di direktori `HASIL VER 5/{YEAR}/`:
    Hasil prediksi curah hujan di seluruh titik grid ERA5 Pulau Jawa (kolom: `longitude`, `latitude`, `ch_pred`).
 4. **`METRICS_CURVE_{month}_{year}.png`**  
    Visualisasi grafik kurva pembelajaran (MAE dan MSE Loss) untuk data training dan testing.
+
+---
+
+## 6. Contoh Studi Kasus & Simulasi Perhitungan (Step-by-Step)
+
+Untuk mempermudah pemahaman alur kerja dan perhitungan matematika dalam skrip, berikut simulasi contoh perhitungan angka konkret untuk eksekusi **Bulan Januari 2014**.
+
+### Skenario Data Contoh:
+- **Data Observasi Stasiun A**: Koordinat $\text{Lon} = 106.50^\circ$, $\text{Lat} = -6.25^\circ$, Curah Hujan Bulanan $y_0 = 350.0 \text{ mm}$.
+- **Grid ERA5 Terdekat**: Grid #102 dengan nilai OLR $X_{\text{olr}} = 215.4 \text{ W/m}^2$.
+- **Rentang OLR Data Training**: Minimum $\text{lo} = 180.0 \text{ W/m}^2$, Maksimum $\text{hi} = 280.0 \text{ W/m}^2$.
+- **Maksimum Curah Hujan Training**: $Y_{\text{max}} = 500.0 \text{ mm}$.
+
+---
+
+### Langkah 1: KDTree Pairing & Masking Spasial
+1. Stasiun A dipasangkan ke Grid ERA5 #102 via KDTree Euclidean Distance.
+2. Pengecekan koordinat: $(106.50, -6.25)$ cocok dengan daftar `points_to_remove`.
+3. **Hasil**: Stasiun A dialokasikan ke dataframe **`df_test`** (Data Testing).
+
+---
+
+### Langkah 2: Scaling Target & Normalisasi Min-Max Kovariat
+1. **Scaling Target Curah Hujan**:
+   $$y_{\text{scaled}} = \frac{y_0}{Y_{\text{max}}} = \frac{350.0 \text{ mm}}{500.0 \text{ mm}} = 0.7000$$
+
+2. **Normalisasi Min-Max Fitur OLR**:
+   $$X_{\text{norm}} = \frac{X_{\text{olr}} - \text{lo}}{\text{hi} - \text{lo}} = \frac{215.4 - 180.0}{280.0 - 180.0} = \frac{35.4}{100.0} = 0.3540$$
+
+---
+
+### Langkah 3: Perhitungan Basis Spasial RBF Wendland $C^2$
+Misalkan untuk Knot Basis pada resolusi $4 \times 4$ ($n = 16$), diperoleh:
+1. **Bandwidth $\theta$**:
+   $$\theta = \frac{1}{\sqrt{16} \times 2.5} = \frac{1}{4 \times 2.5} = 0.10$$
+
+2. **Jarak Terbobot $d$**:
+   Jika jarak koordinat ter-skala ke pusat knot adalah $0.04$, maka:
+   $$d = \frac{0.04}{\theta} = \frac{0.04}{0.10} = 0.40 \quad (0 \le d \le 1)$$
+
+3. **Nilai Fungsi Basis $\phi(d)$**:
+   $$\phi(0.40) = \frac{(1 - 0.40)^6 \times \left(35(0.40)^2 + 18(0.40) + 3\right)}{3}$$
+   $$\phi(0.40) = \frac{(0.60)^6 \times (5.60 + 7.20 + 3.00)}{3} = \frac{0.046656 \times 15.80}{3} = \frac{0.73716}{3} \approx 0.2457$$
+
+---
+
+### Langkah 4: Prediksi DNN & Rescaling Output Asli (mm)
+1. Matriks Fitur $X_{\text{final}} = [0.3540, 0.2457, \dots]$ dimasukkan ke model DNN.
+2. Model mengembalikan hasil prediksi ter-skala:
+   $$\hat{y}_{\text{scaled}} = 0.6800$$
+3. **Rescaling ke Satuan Curah Hujan Asli (mm)**:
+   $$\text{ch\_pred} = \hat{y}_{\text{scaled}} \times Y_{\text{max}} = 0.6800 \times 500.0 \text{ mm} = 340.0 \text{ mm}$$
+
+---
+
+### Langkah 5: Penyesuaian Metrik Evaluasi (MAE & MSE Loss)
+Jika pada epoch tertentu Keras menghitung metrik scaled:
+- $\text{MAE}_{\text{scaled}} = 0.0200$
+- $\text{Loss (MSE)}_{\text{scaled}} = 0.0006$
+
+Maka konversi ke satuan fisik asli adalah:
+- **MAE Asli**:
+  $$\text{MAE}_{\text{asli}} = 0.0200 \times 500.0 \text{ mm} = 10.0 \text{ mm}$$
+- **Loss MSE Asli**:
+  $$\text{Loss}_{\text{asli}} = 0.0006 \times (500.0 \text{ mm})^2 = 0.0006 \times 250000 = 150.0 \text{ mm}^2$$
