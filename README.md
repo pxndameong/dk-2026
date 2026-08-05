@@ -398,6 +398,8 @@ $$
 
 #### Langkah 3: Perhitungan Vektor Basis Spasial RBF ($\phi_1, \phi_2, \dots, \phi_{336}$)
 
+![Ilustrasi Basis Spasial RBF Wendland C2 Multi-Resolusi](rbf_spatial_knots_illustration.png)
+
 - **Konsep Dasar**: Basis RBF bertindak sebagai 'jaring-jaring spasial' multi-resolusi untuk memetakan koordinat fisik Stasiun B $(106.80, -6.50)$ ke dalam 336 dimensi respon spasial ($\Phi_{\mathrm{rbf}} = [\phi_1, \phi_2, \dots, \phi_{336}]$).
 
 - **Distribusi 336 Knot Spasial**:
