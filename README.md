@@ -141,15 +141,24 @@ $$
 
 ---
 
-### 3.2 Fungsi Basis Spasial RBF (Wendland $C^2$)
+### 3.2 Fungsi Basis Spasial RBF (Wendland $C^2$) & Vektor Fitur Spasial
 
-Untuk menangkap variasi spasial lokal dan non-stasioneritas, dibangun basis RBF berdukungan kompak (*compact support*) Wendland $C^2$ pada 3 tingkat gridding resolusi spasial:
+#### Apa itu $\phi_1, \phi_2, \dots, \phi_{336}$?
+$\phi_i$ adalah **nilai respon basis spasial RBF (Radial Basis Function)** di lokasi observasi tertentu terhadap **titik pusat jangkar spasial (knot center) ke-$i$**. 
 
-$$
-\mathrm{NUM}_{\mathrm{basis}} = [4^2, 8^2, 16^2] = [16, 64, 256] \quad (\text{Total 336 basis})
-$$
+Dalam geostatistik konvensional (Kriging), hubungan spasial antar-lokasi dihitung menggunakan matriks kovarians. Pada **DeepKriging**, domain geografis Pulau Jawa "diselimuti" oleh **336 titik jangkar spasial (knots)** yang tersebar secara teratur pada 3 resolusi gridding multi-skala:
 
-#### Parameter & Formula Wendland $C^2$:
+1. **Resolusi 1 ($4 \times 4 = 16$ knots)**: Menangkap variasi spasial skala makro / regional luas.
+2. **Resolusi 2 ($8 \times 8 = 64$ knots)**: Menangkap variasi spasial skala meso / sub-regional.
+3. **Resolusi 3 ($16 \times 16 = 256$ knots)**: Menangkap variasi spasial skala mikro / lokal (efek topografi/pantai).
+
+$$\mathrm{NUM}_{\mathrm{basis}} = 16 + 64 + 256 = \mathbf{336\text{ basis spasial}}$$
+
+Setiap lokasi stasiun $(lon, lat)$ memiliki **vektor sidik jari spasial unik** $\Phi_{\mathrm{rbf}} = [\phi_1, \phi_2, \dots, \phi_{336}]$ yang diumpankan ke jaringan saraf tiruan (DNN).
+
+---
+
+#### Parameter & Formula Perhitungan Wendland $C^2$:
 
 **1. Normalisasi Koordinat Spasial**:
 
@@ -159,23 +168,27 @@ $$
 
 **2. Parameter Jangkauan (Scale / Bandwidth $\theta$)**:
 
-Untuk setiap resolusi $n \in \{16, 64, 256\}$:
+Untuk setiap resolusi $n \in \{16, 64, 256\}$, batas jangkauan pengaruh knot ditentukan oleh:
 
 $$
 \theta = \frac{1}{\sqrt{n} \times 2.5}
 $$
 
-**3. Jarak Terbobot (Scalability Distance $d$)**:
+**3. Jarak Terbobot ke Pusat Knot (Scalability Distance $d$)**:
+
+Jarak Euclidean dari titik lokasi stasiun $(\mathrm{norm}_{\mathrm{lon}}, \mathrm{norm}_{\mathrm{lat}})$ ke pusat knot ke-$i$ yaitu $(x_k, y_k)$:
 
 $$
 d_i = \frac{\sqrt{(\mathrm{norm}_{\mathrm{lon}} - x_k)^2 + (\mathrm{norm}_{\mathrm{lat}} - y_k)^2}}{\theta}
 $$
 
-**4. Fungsi Basis Wendland $C^2$**:
+**4. Fungsi Basis Wendland $C^2$ Berdukungan Kompak (*Compact Support*)**:
 
 $$
-\phi_i(d) = \begin{cases} \frac{(1 - d)^6 (35 d^2 + 18 d + 3)}{3}, & \text{jika } 0 \le d \le 1 \\ 0, & \text{lainnya} \end{cases}
+\phi_i(d) = \begin{cases} \frac{(1 - d)^6 (35 d^2 + 18 d + 3)}{3}, & \text{jika } 0 \le d \le 1 \\ 0, & \text{jika } d > 1 \end{cases}
 $$
+
+*Sifat Compact Support*: Jika jarak stasiun ke pusat knot $d_i > 1$ (di luar radius jangkauan $\theta$), nilai basis bernilai **tepat $0$**. Hanya knot yang berada dekat dengan stasiun yang memberikan nilai respon positif ($\phi_i > 0$).
 
 Fungsi basis yang bernilai $0$ di seluruh domain dieliminasi untuk efisiensi komputasi.
 
@@ -314,10 +327,10 @@ $$
   Koordinat Stasiun B $(106.80, -6.50)$ diperiksa terhadap daftar 9 koordinat uji (`points_to_remove`):
 
 $$
-(106.80, -6.50) \notin \mathrm{points\_to\_remove} \implies \mathrm{Data~Training}
+(106.80, -6.50) \notin \mathrm{TestPoints} \implies \mathrm{Data~Training}
 $$
 
-- **Hasil Tahap 1**: Karena $(106.80, -6.50)$ TIDAK berada dalam daftar 9 titik uji, Stasiun B dialokasikan ke dataframe **`df_train`** (Data Training) untuk melatih model.
+- **Hasil Tahap 1**: Karena $(106.80, -6.50)$ tidak ada dalam daftar 9 titik uji (`points_to_remove`), Stasiun B dialokasikan ke dataframe **`df_train`** (Data Training) untuk melatih model.
 
 ---
 
@@ -342,35 +355,54 @@ $$
 
 ---
 
-#### Langkah 3: Perhitungan Fungsi Basis Spasial RBF (Wendland $C^2$)
-- **Konsep**: Basis RBF bertindak sebagai 'jaring-jaring spasial' untuk menangkap variasi spasial lokal di Pulau Jawa pada 3 resolusi ($4 \times 4$, $8 \times 8$, $16 \times 16$).
+#### Langkah 3: Perhitungan Vektor Basis Spasial RBF ($\phi_1, \phi_2, \dots, \phi_{336}$)
 
-Misalkan kita menghitung nilai salah satu *knot* basis pada resolusi $4 \times 4$ ($n = 16$):
+- **Konsep Dasar**: Basis RBF bertindak sebagai 'jaring-jaring spasial' multi-resolusi untuk memetakan koordinat fisik Stasiun B $(106.80, -6.50)$ ke dalam 336 dimensi respon spasial ($\Phi_{\mathrm{rbf}} = [\phi_1, \phi_2, \dots, \phi_{336}]$).
 
-1. **Hitung Parameter Bandwidth ($\theta$)**:
+- **Distribusi 336 Knot Spasial**:
+  - Resolusi 1 ($n=16$ knots, grid $4 \times 4$): $\phi_1$ sampai $\phi_{16}$
+  - Resolusi 2 ($n=64$ knots, grid $8 \times 8$): $\phi_{17}$ sampai $\phi_{80}$
+  - Resolusi 3 ($n=256$ knots, grid $16 \times 16$): $\phi_{81}$ sampai $\phi_{336}$
 
-$$
-\theta = \frac{1}{\sqrt{n} \times 2.5} = \frac{1}{\sqrt{16} \times 2.5} = \frac{1}{4 \times 2.5} = 0.10
-$$
+##### Simulasi Perhitungan Nilai $\phi_i$ untuk Stasiun B:
 
-2. **Hitung Jarak Terbobot ke Pusat Knot ($d$)**:
-   Jika jarak spasial ter-skala stasiun ke pusat knot tersebut adalah $0.04$:
-
-$$
-d = \frac{\mathrm{Jarak}}{\theta} = \frac{0.04}{0.10} = 0.40 \quad (0 \le d \le 1 \implies \mathrm{Aktif})
-$$
-
-3. **Hitung Nilai Basis Wendland $C^2$ ($\phi(d)$)**:
+1. **Hitung Parameter Bandwidth ($\theta$) pada Resolusi 1 ($n=16$)**:
 
 $$
-\phi(0.40) = \frac{(1 - 0.40)^6 (35(0.40)^2 + 18(0.40) + 3)}{3} = \frac{0.046656 \times 15.80}{3} \approx 0.2457
+\theta = \frac{1}{\sqrt{16} \times 2.5} = \frac{1}{4 \times 2.5} = 0.10
 $$
 
-- **Vektor Fitur Final ($X_{\mathrm{final}}$)**:
-  Matriks input final yang dimasukkan ke jaringan saraf tiruan (DNN) adalah gabungan kovariat OLR ter-skala dan seluruh basis RBF aktif:
+2. **Perhitungan Knot #1 (Lokasi Jauh di Banyuwangi / Jawa Timur)**:
+   - Jarak spasial ter-skala dari Stasiun B ke Knot #1 adalah $0.45$:
 
 $$
-X_{\mathrm{final}} = [X_{\mathrm{norm}}, \phi_1, \phi_2, \dots, \phi_{336}] = [0.3540, 0.2457, \dots]
+d_1 = \frac{\mathrm{Jarak}}{\theta} = \frac{0.45}{0.10} = 4.50 \quad (d_1 > 1 \implies \text{Di luar radius jangkauan})
+$$
+
+   - Nilai Basis Wendland $C^2$:
+
+$$
+\phi_1 = 0.0000 \quad (\text{Knot #1 tidak memberikan pengaruh spasial ke Stasiun B})
+$$
+
+3. **Perhitungan Knot #6 (Lokasi Dekat di Sukabumi / Jawa Barat)**:
+   - Jarak spasial ter-skala dari Stasiun B ke pusat Knot #6 adalah $0.04$:
+
+$$
+d_6 = \frac{\mathrm{Jarak}}{\theta} = \frac{0.04}{0.10} = 0.40 \quad (0 \le d_6 \le 1 \implies \text{Knot Aktif})
+$$
+
+   - Nilai Basis Wendland $C^2$:
+
+$$
+\phi_6(0.40) = \frac{(1 - 0.40)^6 (35(0.40)^2 + 18(0.40) + 3)}{3} = \frac{0.046656 \times 15.80}{3} \approx 0.2457
+$$
+
+4. **Penggabungan Menjadi Vektor Fitur Final ($X_{\mathrm{final}}$)**:
+   - Perhitungan diulang untuk seluruh 336 knot. Matriks input final yang dimasukkan ke jaringan saraf tiruan (DNN) adalah gabungan 1 kovariat OLR ter-skala dan 336 basis RBF spasial:
+
+$$
+X_{\mathrm{final}} = [X_{\mathrm{norm}}, \phi_1, \phi_2, \dots, \phi_{336}] = [0.3540, 0.0000, \dots, 0.2457, \dots, 0.1200]
 $$
 
 ---
