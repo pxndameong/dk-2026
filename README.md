@@ -143,18 +143,35 @@ $$
 
 ### 3.2 Fungsi Basis Spasial RBF (Wendland $C^2$) & Vektor Fitur Spasial
 
-#### Apa itu $\phi_1, \phi_2, \dots, \phi_{336}$?
-$\phi_i$ adalah **nilai respon basis spasial RBF (Radial Basis Function)** di lokasi observasi tertentu terhadap **titik pusat jangkar spasial (knot center) ke-$i$**. 
+![Ilustrasi Basis Spasial RBF Wendland C2 Multi-Resolusi](rbf_spatial_knots_illustration.png)
 
-Dalam geostatistik konvensional (Kriging), hubungan spasial antar-lokasi dihitung menggunakan matriks kovarians. Pada **DeepKriging**, domain geografis Pulau Jawa "diselimuti" oleh **336 titik jangkar spasial (knots)** yang tersebar secara teratur pada 3 resolusi gridding multi-skala:
+```mermaid
+flowchart TD
+    subgraph Multi_Res_Knots ["Domain Spasial Multi-Resolusi (336 Knots)"]
+        R1["Resolusi 1: 4x4 Grid<br/>16 Knots (phi_1 s.d. phi_16)<br/>Skala Makro (theta = 0.10)"]
+        R2["Resolusi 2: 8x8 Grid<br/>64 Knots (phi_17 s.d. phi_80)<br/>Skala Meso (theta = 0.05)"]
+        R3["Resolusi 3: 16x16 Grid<br/>256 Knots (phi_81 s.d. phi_336)<br/>Skala Mikro (theta = 0.025)"]
+    end
 
-1. **Resolusi 1 ($4 \times 4 = 16$ knots)**: Menangkap variasi spasial skala makro / regional luas.
-2. **Resolusi 2 ($8 \times 8 = 64$ knots)**: Menangkap variasi spasial skala meso / sub-regional.
-3. **Resolusi 3 ($16 \times 16 = 256$ knots)**: Menangkap variasi spasial skala mikro / lokal (efek topografi/pantai).
+    subgraph RBF_Evaluation ["Evaluasi Jarak & Compact Support Wendland C2"]
+        St["Stasiun B / Node #165<br/>(111.50°, -8.25°)"]
+        CalcDist["Hitung Jarak Euclidean Terbobot<br/>d_i = Distance / theta"]
+        Cond{"Evaluasi Jarak<br/>d_i <= 1.0?"}
+        Active["Knot Dekat (misal Knot #6)<br/>d = 0.40 <= 1.0<br/>phi_6 = (1-d)⁶ × (35d² + 18d + 3)/3<br/>phi_6 = 0.2457 (AK TIF)"]
+        Inactive["Knot Jauh (misal Knot #1)<br/>d = 4.50 > 1.0<br/>phi_1 = 0.0000 (TIDAK AKTIF)"]
+    end
 
-$$\mathrm{NUM}_{\mathrm{basis}} = 16 + 64 + 256 = \mathbf{336\text{ basis spasial}}$$
+    subgraph Feature_Vector ["Vektor Fitur Spasial Stack"]
+        Stack["Phi_rbf = [phi_1=0.0000, ..., phi_6=0.2457, ..., phi_336=0.1200]<br/>Vektor Input Spasial Ukuran 1 x 336"]
+    end
 
-Setiap lokasi stasiun $(lon, lat)$ memiliki **vektor sidik jari spasial unik** $\Phi_{\mathrm{rbf}} = [\phi_1, \phi_2, \dots, \phi_{336}]$ yang diumpankan ke jaringan saraf tiruan (DNN).
+    R1 & R2 & R3 --> CalcDist
+    St --> CalcDist
+    CalcDist --> Cond
+    Cond -->|"Ya (d <= 1)"| Active
+    Cond -->|"Tidak (d > 1)"| Inactive
+    Active & Inactive --> Stack
+```
 
 ---
 
