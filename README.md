@@ -25,14 +25,14 @@ Melakukan interpolasi spasial dan prediksi curah hujan bulanan (*monthly rainfal
 
 ```mermaid
 flowchart TD
-    A["Mulai Pipeline run_for_month"] --> B["Memuat Data Observasi & ERA5"]
-    B --> C["Spatial Pairing via KDTree<br/>Match Stasiun ke Grid ERA5 Terdekat"]
+    A["Mulai Pipeline<br/>run_for_month"] --> B["Memuat Data<br/>Observasi & ERA5"]
+    B --> C["Spatial Pairing via KDTree<br/>(Match Stasiun ke Grid ERA5)"]
     C --> D["Grouping & Agregasi Observasi<br/>per Grid Node"]
-    D --> E["Export DF_PADAN_month_year.csv"]
+    D --> E["Export<br/>DF_PADAN_month_year.csv"]
     
-    E --> F{"Pemisahan Data<br/>Masking Points to Remove"}
-    F -->|"Match 9 Points"| G["Data Testing df_test"]
-    F -->|"Sisa Titik"| H["Data Training df_train"]
+    E --> F{"Pemisahan Data<br/>(Masking Points)"}
+    F -->|"Match 9 Points"| G["Data Testing<br/>df_test"]
+    F -->|"Sisa Titik"| H["Data Training<br/>df_train"]
     
     H --> I["Normalisasi Min-Max<br/>Variabel Eksogen ERA5"]
     H --> J["Konstruksi RBF Basis<br/>Wendland C2 Multi-Resolusi"]
@@ -43,37 +43,47 @@ flowchart TD
     L --> M["Inisialisasi Model<br/>Sequential DNN"]
     M --> N["Loop Fitting Model<br/>Epoch-by-Epoch"]
     
-    N --> O{"Kriteria Henti:<br/>Epoch >= 10000 ATAU MAE <= Target"}
+    N --> O{"Kriteria Henti:<br/>Epoch >= 10000<br/>ATAU MAE <= Target"}
     O -->|"Belum Tercapai"| N
-    O -->|"Tercapai"| P["Simpan HISTORY_METRICS_month_year.csv<br/>& Curve PNG"]
+    O -->|"Tercapai"| P["Simpan File Metrics CSV<br/>& Curve PNG"]
     
     P --> Q["Prediksi pada Seluruh Grid<br/>ERA5 Pulau Jawa"]
     Q --> R["Rescaling Output:<br/>Prediksi * Y_max"]
-    R --> S["Export HASIL_ch_pred_month-year.csv"]
+    R --> S["Export<br/>HASIL_ch_pred_month-year.csv"]
     S --> T["Selesai"]
 ```
 
 ### 2.2 Arsitektur Detail Jaringan Saraf Tiruan (Deep Neural Network)
 
 ```mermaid
-graph LR
+flowchart TD
     subgraph Input_Features ["Input Layer Stack"]
-        X1["ERA5 Covariates Normalized<br/>1 Variabel Eksogen: olr"]
-        X2["RBF Basis Wendland C2<br/>Multi-resolution: 4x4, 8x8, 16x16"]
+        X1["ERA5 Covariates Normalized<br/>(1 Variabel Eksogen: olr)"]
+        X2["RBF Basis Wendland C2<br/>(Multi-resolution: 4x4, 8x8, 16x16)"]
     end
 
     subgraph DNN_Layers ["Deep Neural Network Architecture"]
-        Input["Concatenated Features<br/>Dimension: Num_Cov + Num_Active_Basis"] --> Dense1["Dense Layer 1<br/>64 Units, ReLU<br/>L2 Reg 0.001<br/>Init: He Uniform"]
-        Dense1 --> BN["Batch Normalization"]
-        BN --> Drop1["Dropout 30%"]
-        Drop1 --> Dense2["Dense Layer 2<br/>32 Units, ReLU<br/>L2 Reg 0.001"]
-        Dense2 --> Drop2["Dropout 20%"]
-        Drop2 --> Dense3["Dense Layer 3<br/>16 Units, ReLU"]
-        Dense3 --> Out["Output Layer<br/>1 Unit, Linear Activation"]
+        Input["Concatenated Features<br/>(Covariates + Active RBF Basis)"]
+        Dense1["Dense Layer 1<br/>(64 Units, ReLU, He Uniform, L2: 0.001)"]
+        BN["Batch Normalization"]
+        Drop1["Dropout 30%"]
+        Dense2["Dense Layer 2<br/>(32 Units, ReLU, L2: 0.001)"]
+        Drop2["Dropout 20%"]
+        Dense3["Dense Layer 3<br/>(16 Units, ReLU)"]
+        Out["Output Layer<br/>(1 Unit, Linear Activation)"]
     end
 
-    Input_Features --> Input
-    Out --> YPred["Scaled Prediction y_hat"]
+    YPred["Scaled Prediction<br/>y_hat"]
+
+    X1 & X2 --> Input
+    Input --> Dense1
+    Dense1 --> BN
+    BN --> Drop1
+    Drop1 --> Dense2
+    Dense2 --> Drop2
+    Drop2 --> Dense3
+    Dense3 --> Out
+    Out --> YPred
 ```
 
 ---
