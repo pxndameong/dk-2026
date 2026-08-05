@@ -25,55 +25,55 @@ Melakukan interpolasi spasial dan prediksi curah hujan bulanan (*monthly rainfal
 
 ```mermaid
 flowchart TD
-    A[Mulai Pipeline run_for_month] --> B[Memuat Data Observasi & ERA5]
-    B --> C[Spatial Pairing via KDTree<br/>Match Stasiun ke Grid ERA5 Terdekat]
-    C --> D[Grouping & Agregasi Observasi per Grid Node]
-    D --> E[Export DF_PADAN_month_year.csv]
+    A["Mulai Pipeline run_for_month"] --> B["Memuat Data Observasi & ERA5"]
+    B --> C["Spatial Pairing via KDTree<br/>Match Stasiun ke Grid ERA5 Terdekat"]
+    C --> D["Grouping & Agregasi Observasi<br/>per Grid Node"]
+    D --> E["Export DF_PADAN_month_year.csv"]
     
-    E --> F{Pemisahan Data<br/>Masking Points to Remove}
-    F -->|Match 9 Points| G[Data Testing df_test]
-    F -->|Sisa Titik| H[Data Training df_train]
+    E --> F{"Pemisahan Data<br/>Masking Points to Remove"}
+    F -->|"Match 9 Points"| G["Data Testing df_test"]
+    F -->|"Sisa Titik"| H["Data Training df_train"]
     
-    H --> I[Normalisasi Min-Max Variabel Eksogen ERA5]
-    H --> J[Konstruksi RBF Basis Wendland C2 Multi-Resolusi]
+    H --> I["Normalisasi Min-Max<br/>Variabel Eksogen ERA5"]
+    H --> J["Konstruksi RBF Basis<br/>Wendland C2 Multi-Resolusi"]
     
-    I & J --> K[Penggabungan Feature Stack:<br/>X = Covariates + RBF Basis]
-    K --> L[Normalisasi Skala Target: y_scaled = y / Y_max]
+    I & J --> K["Penggabungan Feature Stack:<br/>X = Covariates + RBF Basis"]
+    K --> L["Normalisasi Skala Target:<br/>y_scaled = y / Y_max"]
     
-    L --> M[Inisialisasi Model Sequential DNN]
-    M --> N[Loop Fitting Model Epoch-by-Epoch]
+    L --> M["Inisialisasi Model<br/>Sequential DNN"]
+    M --> N["Loop Fitting Model<br/>Epoch-by-Epoch"]
     
-    N --> O{Kriteria Henti:<br/>Epoch >= 10000 ATAU MAE <= Target}
-    O -->|Belum Tercapai| N
-    O -->|Tercapai| P[Simpan HISTORY_METRICS_month_year.csv & Curve PNG]
+    N --> O{"Kriteria Henti:<br/>Epoch >= 10000 ATAU MAE <= Target"}
+    O -->|"Belum Tercapai"| N
+    O -->|"Tercapai"| P["Simpan HISTORY_METRICS_month_year.csv<br/>& Curve PNG"]
     
-    P --> Q[Prediksi pada Seluruh Grid ERA5 Pulau Jawa]
-    Q --> R[Rescaling Output: Prediksi * Y_max]
-    R --> S[Export HASIL_ch_pred_month-year.csv]
-    S --> T[Selesai]
+    P --> Q["Prediksi pada Seluruh Grid<br/>ERA5 Pulau Jawa"]
+    Q --> R["Rescaling Output:<br/>Prediksi * Y_max"]
+    R --> S["Export HASIL_ch_pred_month-year.csv"]
+    S --> T["Selesai"]
 ```
 
 ### 2.2 Arsitektur Detail Jaringan Saraf Tiruan (Deep Neural Network)
 
 ```mermaid
 graph LR
-    subgraph Input_Features [Input Layer Stack]
-        X1[ERA5 Covariates Normalized<br/>1 Variabel Eksogen: olr]
-        X2[RBF Basis Wendland C2<br/>Multi-resolution: 4x4, 8x8, 16x16]
+    subgraph Input_Features ["Input Layer Stack"]
+        X1["ERA5 Covariates Normalized<br/>1 Variabel Eksogen: olr"]
+        X2["RBF Basis Wendland C2<br/>Multi-resolution: 4x4, 8x8, 16x16"]
     end
 
-    subgraph DNN_Layers [Deep Neural Network Architecture]
-        Input[Concatenated Features<br/>Dimension: Num_Cov + Num_Active_Basis] --> Dense1[Dense Layer 1<br/>64 Units, ReLU, L2 Regularizer 0.001<br/>Initializer: He Uniform]
-        Dense1 --> BN[Batch Normalization]
-        BN --> Drop1[Dropout 30%]
-        Drop1 --> Dense2[Dense Layer 2<br/>32 Units, ReLU, L2 Regularizer 0.001]
-        Dense2 --> Drop2[Dropout 20%]
-        Drop2 --> Dense3[Dense Layer 3<br/>16 Units, ReLU]
-        Dense3 --> Out[Output Layer<br/>1 Unit, Linear Activation]
+    subgraph DNN_Layers ["Deep Neural Network Architecture"]
+        Input["Concatenated Features<br/>Dimension: Num_Cov + Num_Active_Basis"] --> Dense1["Dense Layer 1<br/>64 Units, ReLU<br/>L2 Reg 0.001<br/>Init: He Uniform"]
+        Dense1 --> BN["Batch Normalization"]
+        BN --> Drop1["Dropout 30%"]
+        Drop1 --> Dense2["Dense Layer 2<br/>32 Units, ReLU<br/>L2 Reg 0.001"]
+        Dense2 --> Drop2["Dropout 20%"]
+        Drop2 --> Dense3["Dense Layer 3<br/>16 Units, ReLU"]
+        Dense3 --> Out["Output Layer<br/>1 Unit, Linear Activation"]
     end
 
     Input_Features --> Input
-    Out --> YPred[Scaled Prediction y_hat]
+    Out --> YPred["Scaled Prediction y_hat"]
 ```
 
 ---
