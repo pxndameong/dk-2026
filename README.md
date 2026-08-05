@@ -372,25 +372,31 @@ $$
 \theta = \frac{1}{\sqrt{16} \times 2.5} = \frac{1}{4 \times 2.5} = 0.10
 $$
 
-2. **Perhitungan Knot #1 (Lokasi Jauh di Banyuwangi / Jawa Timur)**:
-   - Jarak spasial ter-skala dari Stasiun B ke Knot #1 adalah $0.45$:
+2. **Perhitungan Knot 1 (Lokasi Jauh di Banyuwangi / Jawa Timur)**:
+   - Jarak spasial ter-skala dari Stasiun B ke Knot 1 adalah $0.45$:
 
 $$
-d_1 = \frac{\mathrm{Jarak}}{\theta} = \frac{0.45}{0.10} = 4.50 \quad (d_1 > 1 \implies \text{Di luar radius jangkauan})
+d_1 = \frac{\mathrm{Jarak}}{\theta} = \frac{0.45}{0.10} = 4.50
 $$
+
+   *(Hasil $d_1 > 1$, lokasi knot berada di luar radius jangkauan $\theta$)*.
 
    - Nilai Basis Wendland $C^2$:
 
 $$
-\phi_1 = 0.0000 \quad (\text{Knot #1 tidak memberikan pengaruh spasial ke Stasiun B})
+\phi_1 = 0.0000
 $$
 
-3. **Perhitungan Knot #6 (Lokasi Dekat di Sukabumi / Jawa Barat)**:
-   - Jarak spasial ter-skala dari Stasiun B ke pusat Knot #6 adalah $0.04$:
+   *(Knot 1 tidak memberikan pengaruh respon spasial ke Stasiun B)*.
+
+3. **Perhitungan Knot 6 (Lokasi Dekat di Sukabumi / Jawa Barat)**:
+   - Jarak spasial ter-skala dari Stasiun B ke pusat Knot 6 adalah $0.04$:
 
 $$
-d_6 = \frac{\mathrm{Jarak}}{\theta} = \frac{0.04}{0.10} = 0.40 \quad (0 \le d_6 \le 1 \implies \text{Knot Aktif})
+d_6 = \frac{\mathrm{Jarak}}{\theta} = \frac{0.04}{0.10} = 0.40
 $$
+
+   *(Hasil $0 \le d_6 \le 1$, knot berada dalam radius jangkauan $\theta$ sehingga status knot aktif)*.
 
    - Nilai Basis Wendland $C^2$:
 
