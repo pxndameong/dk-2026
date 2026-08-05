@@ -70,19 +70,19 @@ flowchart TD
 | **C** | Persegi Panjang `[ ]` | **KDTree Pairing** | Mencari tetangga terdekat grid ERA5 untuk setiap stasiun observasi menggunakan algoritma KDTree spasial 2D berdasarkan jarak Euclidean koordinat. |
 | **D** | Persegi Panjang `[ ]` | **Agregasi Observasi** | Mengelompokkan stasiun yang terpasang pada grid node yang sama dengan operasi rerata: `df_rain = df_obs.groupby("neighbor")[["monthly_rainfall"]].mean()`. |
 | **E** | Jajar Genjang `[/ /]` | **Export DF_PADAN** | Menyimpan dataset hasil pairing lengkap yang berisi nilai observasi dan variabel eksogen ERA5 ke berkas `DF_PADAN_{month}_{year}.csv`. |
-| **F** | Belah Ketupat `{" "}` | **Pemisahan Masking** | Evaluasi kondisi percabangan spasial: apakah koordinat $(lon, lat)$ termasuk dalam daftar 9 titik *testing* (`points_to_remove`). |
+| **F** | Belah Ketupat `{" "}` | **Pemisahan Masking** | Evaluasi kondisi percabangan spasial: apakah koordinat `(lon, lat)` termasuk dalam daftar 9 titik *testing* (`points_to_remove`). |
 | **G** | Jajar Genjang `[/ /]` | **Data Testing** | Subset titik yang cocok dengan 9 koordinat uji dipisahkan ke dataframe `df_test` untuk validasi independen. |
 | **H** | Jajar Genjang `[/ /]` | **Data Training** | Sisa titik observasi dipisahkan ke dataframe `df_train` sebagai data latih model. |
-| **I** | Persegi Panjang `[ ]` | **Min-Max Scaling Kovariat** | Fitur atmosferik OLR dinormalisasi ke rentang $[0, 1]$ berdasarkan nilai minimum ($\mathrm{lo}$) dan maksimum ($\mathrm{hi}$) data training: $X_{\mathrm{norm}} = \frac{X - \mathrm{lo}}{\mathrm{hi} - \mathrm{lo}}$. |
+| **I** | Persegi Panjang `[ ]` | **Min-Max Scaling Kovariat** | Fitur atmosferik OLR dinormalisasi ke rentang $[0, 1]$ berdasarkan nilai minimum ($\mathrm{lo}$) dan maksimum ($\mathrm{hi}$) data training: <code>X<sub>norm</sub> = (X - lo) / (hi - lo)</code>. |
 | **J** | Persegi Panjang `[ ]` | **Konstruksi RBF Basis** | Pembentukan matriks basis spasial RBF Wendland $C^2$ pada 3 resolusi ($16, 64, 256$). Membuang basis yang tidak aktif ($\phi = 0$ di seluruh domain). |
-| **K** | Persegi Panjang `[ ]` | **Concatenate Features** | Penggabungan matriks kovariat eksogen ter-skala dengan matriks RBF basis menjadi matriks fitur gabungan: $X = [X_{\mathrm{cov,norm}}, \Phi_{\mathrm{rbf}}]$. |
-| **L** | Persegi Panjang `[ ]` | **Scaling Target** | Target curah hujan dinormalisasi dengan membagi terhadap nilai maksimum target training: $y_{\mathrm{scaled}} = \frac{y}{Y_{\mathrm{max}}}$, di mana $Y_{\mathrm{max}} = \max(y_{\mathrm{train0}})$. |
+| **K** | Persegi Panjang `[ ]` | **Concatenate Features** | Penggabungan matriks kovariat eksogen ter-skala dengan matriks RBF basis menjadi matriks fitur gabungan: <code>X = [X<sub>cov_norm</sub>, Φ<sub>rbf</sub>]</code>. |
+| **L** | Persegi Panjang `[ ]` | **Scaling Target** | Target curah hujan dinormalisasi dengan membagi terhadap nilai maksimum target training: <code>y<sub>scaled</sub> = y / Y<sub>max</sub></code>, di mana <code>Y<sub>max</sub> = max(y<sub>train0</sub>)</code>. |
 | **M** | Persegi Panjang `[ ]` | **Inisialisasi Model DNN** | Membangun jaringan saraf Sequential 3 layer (64 -> 32 -> 16 -> 1) dengan aktivasi ReLU, Batch Normalization, Dropout (30%, 20%), $L_2$ regularizer (0.001), dan optimizer Adam (learning rate = 0.0005). |
 | **N** | Persegi Panjang `[ ]` | **Training Iteratif** | Fitting model epoch demi epoch dengan batch size 16. Evaluasi loss MSE & MAE pada data training dan testing. |
 | **O** | Belah Ketupat `{" "}` | **Kriteria Henti** | Pengecekan kondisi henti loop training: apakah `epochs >= 10000` ATAU `MAE_scaled <= 0.000002`. Jika belum, iterasi dilanjutkan. |
-| **P** | Jajar Genjang `[/ /]` | **Export History & Grafik** | Mengembalikan metrik ke satuan asli ($\mathrm{MAE}_{\mathrm{asli}} = \mathrm{MAE}_{\mathrm{scaled}} \times Y_{\mathrm{max}}$, $\mathrm{Loss}_{\mathrm{asli}} = \mathrm{Loss}_{\mathrm{scaled}} \times Y_{\mathrm{max}}^2$), menyimpannya ke `HISTORY_METRICS.csv`, dan menggambar `METRICS_CURVE.png`. |
+| **P** | Jajar Genjang `[/ /]` | **Export History & Grafik** | Mengembalikan metrik ke satuan asli (<code>MAE<sub>asli</sub> = MAE<sub>scaled</sub> × Y<sub>max</sub></code>, <code>Loss<sub>asli</sub> = Loss<sub>scaled</sub> × Y<sub>max</sub>²</code>), menyimpannya ke `HISTORY_METRICS.csv`, dan menggambar `METRICS_CURVE.png`. |
 | **Q** | Persegi Panjang `[ ]` | **Prediksi Grid Full** | Mengumpankan seluruh koordinat grid ERA5 Pulau Jawa (beserta RBF basis full $\Phi_{\mathrm{all}}$) ke model terlatih untuk memperoleh output rasio $\hat{y}$. |
-| **R** | Persegi Panjang `[ ]` | **Rescaling Output** | Mengalikan kembali output rasio jaringan dengan faktor skala target $Y_{\mathrm{max}}$ untuk mendapatkan prediksi nilai curah hujan asli (mm): $y_{\mathrm{pred}} = \hat{y} \times Y_{\mathrm{max}}$. |
+| **R** | Persegi Panjang `[ ]` | **Rescaling Output** | Mengalikan kembali output rasio jaringan dengan faktor skala target $Y_{\mathrm{max}}$ untuk mendapatkan prediksi nilai curah hujan asli (mm): <code>y<sub>pred</sub> = ŷ × Y<sub>max</sub></code>. |
 | **S** | Jajar Genjang `[/ /]` | **Export Hasil Prediksi** | Menyimpan koordinat `longitude`, `latitude`, dan `ch_pred` ke berkas luaran akhir `HASIL_ch_pred_{month}-{year}.csv`. |
 | **T** | Oval `([])` | **Stop / Selesai** | Pipeline pemrosesan bulan selesai dengan sukses. |
 
@@ -375,24 +375,84 @@ $$
 
 ---
 
-#### Langkah 4: Prediksi Neural Network & Rescaling Output Curah Hujan
-1. Vektor fitur $X_{\mathrm{final}}$ diumpankan ke model Sequential DNN.
-2. Model mengembalikan hasil prediksi rasio ter-skala:
+#### Langkah 4: Alur Pemrosesan Jaringan Saraf Tiruan (DNN Forward Pass) & Rescaling
+Vektor fitur $X_{\mathrm{final}}$ diumpankan ke dalam arsitektur Sequential Deep Neural Network (DNN) 3-layer. Berikut rincian pemrosesan internal layer demi layer secara berurutan (*forward pass*):
+
+```mermaid
+flowchart TD
+    In["Input Vector X_final<br/>[0.3540, 0.2457, ...]"] --> L1["Dense 1 (64 Units)<br/>+ ReLU + BN + Drop(0.3)"]
+    L1 --> L2["Dense 2 (32 Units)<br/>+ ReLU + Drop(0.2)"]
+    L2 --> L3["Dense 3 (16 Units)<br/>+ ReLU"]
+    L3 --> Out["Output Layer (1 Unit)<br/>Linear Activation"]
+    Out --> YHat["Scaled Ratio Output<br/>y_hat = 0.6800"]
+    YHat --> Rescale["Rescaling Output<br/>y_pred = 0.6800 * 500.0 = 340.0 mm"]
+```
+
+##### Rincian Tahapan Layer demi Layer:
+
+1. **Vektor Input Fitur ($X_{\mathrm{final}}$)**:
+   - Ukuran Input: $[1 \times \mathrm{Num\_Features}]$ (1 Kovariat OLR ter-skala + 336 Basis Spasial RBF).
+   - Contoh Vektor Input:
 
 $$
-\hat{y}_{\mathrm{scaled}} = 0.6800
+X_{\mathrm{final}} = [0.3540, 0.2457, 0.0000, \dots, 0.1200]
 $$
 
-3. **Rescaling ke Satuan Fisik Asli (mm)**:
+2. **Layer 1: Dense (64 Units) + ReLU Activation + Batch Normalization + Dropout (0.3)**:
+   - **Perkalian Matriks & Bias**: Mengombinasikan seluruh fitur input dengan matriks bobot $W_1$ dan bias $b_1$:
 
 $$
-y_{\mathrm{pred}} = \hat{y}_{\mathrm{scaled}} \times Y_{\mathrm{max}} = 0.6800 \times 500.0 = 340.0\mathrm{~mm}
+Z_1 = X_{\mathrm{final}} \cdot W_1 + b_1
 $$
 
-4. **Evaluasi Selisih (Eror Prediksi)**:
+   - **Aktivasi ReLU**: Mengubah nilai negatif menjadi $0$ dan membiarkan nilai positif:
 
 $$
-\mathrm{Eror} = |y_0 - y_{\mathrm{pred}}| = |350.0 - 340.0| = 10.0\mathrm{~mm}
+A_1 = \max(0, Z_1) \quad (\text{Vektor 64 elemen})
+$$
+
+   - **Batch Normalization**: Menstabilkan distribusi gradien dengan menormalisasi mean $\mu$ dan varians $\sigma^2$:
+
+$$
+\hat{A}_1 = \gamma \left( \frac{A_1 - \mu}{\sqrt{\sigma^2 + \epsilon}} \right) + \beta
+$$
+
+   - **Dropout (30%)**: Mematikan 30% neuron secara acak saat training untuk mencegah *overfitting*.
+
+3. **Layer 2: Dense (32 Units) + ReLU Activation + Dropout (0.2)**:
+   - Mengompresi 64 fitur menjadi 32 abstraksi tingkat menengah:
+
+$$
+Z_2 = \hat{A}_1 \cdot W_2 + b_2, \quad A_2 = \max(0, Z_2) \quad (\text{Vektor 32 elemen})
+$$
+
+   - Regularisasi Tambahan: Dropout 20% dan $L_2(0.001)$ weight penalty.
+
+4. **Layer 3: Dense (16 Units) + ReLU Activation**:
+   - Memadatkan 32 fitur menjadi 16 representasi fitur spasial-atmosferik paling signifikan:
+
+$$
+Z_3 = A_2 \cdot W_3 + b_3, \quad A_3 = \max(0, Z_3) \quad (\text{Vektor 16 elemen})
+$$
+
+5. **Output Layer: Dense (1 Unit) + Linear Activation**:
+   - Menghasilkan 1 nilai skalar output rasio curah hujan ter-skala:
+
+$$
+\hat{y}_{\mathrm{scaled}} = A_3 \cdot W_{\mathrm{out}} + b_{\mathrm{out}} = 0.6800
+$$
+
+6. **Rescaling ke Satuan Fisik Asli (mm)**:
+   - Mengalikan nilai rasio ter-skala dengan faktor skala maksimum target $Y_{\mathrm{max}} = 500.0\mathrm{~mm}$:
+
+$$
+y_{\mathrm{pred}} = \hat{y}_{\mathrm{scaled}} \times Y_{\mathrm{max}} = 0.6800 \times 500.0\mathrm{~mm} = 340.0\mathrm{~mm}
+$$
+
+7. **Evaluasi Selisih (Eror Prediksi)**:
+
+$$
+\mathrm{Eror} = |y_0 - y_{\mathrm{pred}}| = |350.0\mathrm{~mm} - 340.0\mathrm{~mm}| = 10.0\mathrm{~mm}
 $$
 
 ---
@@ -400,7 +460,12 @@ $$
 #### Langkah 5: Penyesuaian Satuan Metrik Evaluasi (MAE & Loss)
 Saat proses fitting model, Keras mencatat metrik dalam skala ter-skala ($0-1$). Pada akhir epoch, skrip mengonversinya kembali ke satuan fisik asli untuk dicatat di `HISTORY_METRICS_1_2014.csv`.
 
-- **Metrik Scaled Epoch Terakhir**: $\mathrm{MAE}_{\mathrm{scaled}} = 0.0200$, $\mathrm{Loss}_{\mathrm{scaled}} = 0.0006$
+- **Metrik Scaled Epoch Terakhir**:
+
+$$
+\mathrm{MAE}_{\mathrm{scaled}} = 0.0200, \quad \mathrm{Loss}_{\mathrm{scaled}} = 0.0006
+$$
+
 - **Konversi ke Satuan Fisik**:
 
 1. **MAE Asli (mm)**:
