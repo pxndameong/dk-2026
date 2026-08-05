@@ -275,16 +275,16 @@ Untuk mempermudah pemahaman mengenai alur kerja skrip dan perhitungan matematika
 
 ### 6.1 Skenario & Data Awal
 
-Bayangkan kita memiliki satu lokasi stasiun observasi curah hujan di Jakarta (Stasiun A) dan kita ingin memprediksi curah hujannya menggunakan variabel radiasi gelombang panjang (**OLR**) dari ERA5 serta fungsi basis spasial RBF.
+Bayangkan kita memiliki satu lokasi stasiun observasi curah hujan (Stasiun B - Data Training) dan kita ingin memprediksi curah hujannya menggunakan variabel radiasi gelombang panjang (**OLR**) dari ERA5 serta fungsi basis spasial RBF.
 
 #### Tabel Parameter & Input Awal:
 | Parameter / Fitur | Variabel / Simbol | Nilai Contoh | Keterangan & Satuan |
 | :--- | :--- | :--- | :--- |
-| **Lokasi Stasiun A** | $(\mathrm{Lon}, \mathrm{Lat})$ | $(106.50^\circ, -6.25^\circ)$ | Koordinat geografis lokasi observasi |
+| **Lokasi Stasiun B** | $(\mathrm{Lon}, \mathrm{Lat})$ | $(106.80^\circ, -6.50^\circ)$ | Koordinat geografis lokasi observasi (Data Training) |
 | **Curah Hujan Asli** | $y_0$ | $350.0\mathrm{~mm}$ | Total curah hujan bulanan observasi |
 | **Nilai OLR ERA5** | $X_{\mathrm{olr}}$ | $215.4\mathrm{~W/m}^2$ | Radiasi OLR pada grid terdekat stasiun |
 | **Batas Minimum OLR** | $\mathrm{lo}$ | $180.0\mathrm{~W/m}^2$ | Nilai OLR terkecil pada subset *training* |
-| **Batas Maksimum OLR** | $\mathrm{hi}$ | $280.0\mathrm{~W/m}^2$ | Nilai OLR terbesar pada subset *training* |
+| **Batas Maksimum OLR** | $\text{hi}$ | $280.0\mathrm{~W/m}^2$ | Nilai OLR terbesar pada subset *training* |
 | **Maksimum Curah Hujan** | $Y_{\mathrm{max}}$ | $500.0\mathrm{~mm}$ | Curah hujan tertinggi pada data *training* |
 
 ---
@@ -301,7 +301,7 @@ flowchart LR
 
 ---
 
-#### Langkah 1: Pairing Spasial (KDTree) & Masking Testing Set
+#### Langkah 1: Pairing Spasial (KDTree) & Masking Training Set
 - **Konsep**: Koordinat stasiun observasi jarang sekali tepat berada di titik grid ERA5. Algoritma KDTree mencari koordinat grid ERA5 yang memiliki jarak terkecil (tetangga terdekat).
 - **Perhitungan Jarak Euclidean**:
 
@@ -309,15 +309,15 @@ $$
 d = \sqrt{(\mathrm{Lon}_{\mathrm{obs}} - \mathrm{Lon}_{\mathrm{grid}})^2 + (\mathrm{Lat}_{\mathrm{obs}} - \mathrm{Lat}_{\mathrm{grid}})^2}
 $$
 
-  *(Hasil dipasangkan ke Grid ERA5 #102)*.
-- **Pengecekan Masking**:
-  Koordinat Stasiun A $(106.50, -6.25)$ diperiksa terhadap daftar 9 koordinat uji (`points_to_remove`):
+  *(Hasil dipasangkan ke Grid ERA5 #145)*.
+- **Pengecekan Masking Spasial**:
+  Koordinat Stasiun B $(106.80, -6.50)$ diperiksa terhadap daftar 9 koordinat uji (`points_to_remove`):
 
 $$
-(106.50, -6.25) \in \mathrm{TestPoints} \implies \mathrm{Terdeteksi}
+(106.80, -6.50) \notin \mathrm{points\_to\_remove} \implies \mathrm{Data~Training}
 $$
 
-  *(Koordinat terdeteksi dalam daftar `points_to_remove` sehingga dialokasikan ke Data Testing `df_test`)*.
+- **Hasil Tahap 1**: Karena $(106.80, -6.50)$ TIDAK berada dalam daftar 9 titik uji, Stasiun B dialokasikan ke dataframe **`df_train`** (Data Training) untuk melatih model.
 
 ---
 
