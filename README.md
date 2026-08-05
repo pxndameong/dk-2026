@@ -314,23 +314,47 @@ flowchart LR
 
 ---
 
-#### Langkah 1: Pairing Spasial (KDTree) & Masking Training Set
-- **Konsep**: Koordinat stasiun observasi jarang sekali tepat berada di titik grid ERA5. Algoritma KDTree mencari koordinat grid ERA5 yang memiliki jarak terkecil (tetangga terdekat).
-- **Perhitungan Jarak Euclidean**:
+#### Langkah 1: Pairing Spasial (KDTree), Agregasi, & Masking Training Set
+
+##### Konsep Spasial:
+Koordinat stasiun observasi permukaan jarang sekali berada tepat di titik grid ERA5. Algoritma `scipy.spatial.KDTree` mencari koordinat grid ERA5 terdekat berdasarkan jarak Euclidean 2D:
 
 $$
 d = \sqrt{(\mathrm{Lon}_{\mathrm{obs}} - \mathrm{Lon}_{\mathrm{grid}})^2 + (\mathrm{Lat}_{\mathrm{obs}} - \mathrm{Lat}_{\mathrm{grid}})^2}
 $$
 
-  *(Hasil dipasangkan ke Grid ERA5 #145)*.
-- **Pengecekan Masking Spasial**:
-  Koordinat Stasiun B $(106.80, -6.50)$ diperiksa terhadap daftar 9 koordinat uji (`points_to_remove`):
+##### Contoh Nyata Sesuai Koding & Dataset Asli (`DF_PADAN_1_2014.csv`):
+
+1. **Stasiun Observasi Berdekatan (Data Asli `sum_bulanan_rainfall_1.txt`)**:
+   Misalkan terdapat 3 stasiun observasi permukaan di Jawa Timur yang lokasinya saling berdekatan:
+   - Stasiun A: $(\mathrm{Lon}=111.48^\circ, \mathrm{Lat}=-8.23^\circ)$, Curah Hujan = $420.0\mathrm{~mm}$
+   - Stasiun B: $(\mathrm{Lon}=111.51^\circ, \mathrm{Lat}=-8.26^\circ)$, Curah Hujan = $395.0\mathrm{~mm}$
+   - Stasiun C: $(\mathrm{Lon}=111.52^\circ, \mathrm{Lat}=-8.24^\circ)$, Curah Hujan = $414.0\mathrm{~mm}$
+
+2. **Proses Matching via KDTree (`tree.query(...)`)**:
+   - Kode menjalankan `tree = spatial.KDTree(df_eks[["lon", "lat"]].values)`.
+   - Grid ERA5 terdekat di dataset ERA5 adalah **Node Grid #165** pada koordinat $(\mathrm{Lon}=111.50^\circ, \mathrm{Lat}=-8.25^\circ)$.
+   - Hasil query menetapkan ketiga stasiun tersebut ke tetangga yang sama: `neighbor = 165`.
+
+3. **Agregasi Mean (`df_obs.groupby("neighbor").mean()`)**:
+   - Karena 3 stasiun terpasang pada Node #165 yang sama, kode menghitung nilai rerata curah hujan:
 
 $$
-(106.80, -6.50) \notin \mathrm{TestPoints} \implies \mathrm{Data~Training}
+\mathrm{CH}_{\mathrm{rata}} = \frac{420.0 + 395.0 + 414.0}{3} = 409.67\mathrm{~mm}
 $$
 
-- **Hasil Tahap 1**: Karena $(106.80, -6.50)$ tidak ada dalam daftar 9 titik uji (`points_to_remove`), Stasiun B dialokasikan ke dataframe **`df_train`** (Data Training) untuk melatih model.
+4. **Hasil Ekspor File CSV (`DF_PADAN_1_2014.csv`)**:
+   - Pada berkas luaran asli `DF_PADAN_1_2014.csv` (baris `idx_new = 165`):
+     `idx_new=165, lat=-8.25, lon=111.5, olr=16702640, monthly_rainfall=409.67`
+
+5. **Pengecekan Masking Testing vs Training**:
+   - Koordinat Node #165 $(111.50, -8.25)$ diperiksa terhadap 9 titik `points_to_remove`:
+
+$$
+(111.50, -8.25) \notin \mathrm{TestPoints} \implies \mathrm{Data~Training}
+$$
+
+   - Node #165 dialokasikan ke dataframe **`df_train`** (Data Training) untuk melatih model.
 
 ---
 
