@@ -1,6 +1,6 @@
-# Dokumentasi Arsitektur Model DeepKriging-Hybrid (Ver 5)
+# Dokumentasi Arsitektur Model DeepKriging-Hybrid (1-Var OLR - Ver 5)
 
-Dokumentasi ini menjelaskan secara menyeluruh arsitektur, basis matematis, alur pemrosesan data, serta struktur model jaringan saraf tiruan (DNN) yang diimplementasikan pada skrip [`kode2026_5var_ver2_recordloss5_newbasis.py`](file:///home/deepkriging/tsaqib/1_2026_DKNEW/5var_ver2/kode2026_5var_ver2_recordloss5_newbasis.py).
+Dokumentasi ini menjelaskan secara menyeluruh arsitektur, basis matematis, alur pemrosesan data, serta struktur model jaringan saraf tiruan (DNN) yang diimplementasikan pada skrip [`kode2026_1var_recordloss5_newbasis.py`](file:///home/deepkriging/tsaqib/1_2026_DKNEW/1var_olr/kode2026_1var_recordloss5_newbasis.py).
 
 ---
 
@@ -12,7 +12,7 @@ Model ini menerapkan metode **DeepKriging-Hybrid**, yaitu penggabungan antara **
 Melakukan interpolasi spasial dan prediksi curah hujan bulanan (*monthly rainfall* dalam mm) di seluruh wilayah Pulau Jawa berbasis data observasi permukaan dan covariate ERA5.
 
 ### Karakteristik Kunci Model
-- **Input Kovariat Eksogen**: 5 variabel fisiografis/atmosferik ERA5 (`w_500`, `olr`, `vimfc`, `r_850`, `tcrw`) + koordinat geografis (`lat`, `lon`).
+- **Input Kovariat Eksogen**: 1 variabel atmosferik ERA5 (`olr`) + koordinat geografis (`lat`, `lon`).
 - **Fungsi Basis Spasial**: RBF Wendland $C^2$ berdukungan kompak (*compact support*) pada 3 tingkat resolusi ($4^2=16$, $8^2=64$, $16^2=256$).
 - **Metode Pairing Spasial**: Pemasangan koordinat stasiun observasi ke grid terdekat ERA5 menggunakan **KDTree**.
 - **Normalisasi Lanjutan**: Skala target dipetakan terhadap nilai maksimum $Y_{\text{max}}$, dan variabel eksogen dinormalisasi Min-Max berdasarkan subset *training*.
@@ -58,7 +58,7 @@ flowchart TD
 ```mermaid
 graph LR
     subgraph Input_Features [Input Layer Stack]
-        X1[ERA5 Covariates Normalized<br/>5 Variabel: w_500, olr, vimfc, r_850, tcrw]
+        X1[ERA5 Covariates Normalized<br/>1 Variabel Eksogen: olr]
         X2[RBF Basis Wendland C2<br/>Multi-resolution: 4x4, 8x8, 16x16]
     end
 
@@ -84,11 +84,7 @@ graph LR
 Variabel yang diekstrak dari dataset bulanan ERA5 (`EKSOGEN_COLS`):
 1. **`lat`**: Garis Lintang
 2. **`lon`**: Garis Bujur
-3. **`w_500`**: Vertical velocity (kecepatan vertikal pada lapisan 500 hPa)
-4. **`olr`**: Outgoing Longwave Radiation
-5. **`vimfc`**: Vertically Integrated Moisture Divergence / Flux Convergence
-6. **`r_850`**: Relative Humidity pada lapisan 850 hPa
-7. **`tcrw`**: Total Column Rain Water
+3. **`olr`**: Outgoing Longwave Radiation
 
 **Skala Normalisasi (Min-Max)**:
 
@@ -186,7 +182,7 @@ Beberapa parameter utama yang dapat dikonfigurasi melalui variabel lingkungan ma
 ```python
 YEAR = int(os.environ.get('PIPELINE_YEAR', 2014))   # Tahun eksekusi pipeline
 MONTH_START = int(os.environ.get('PIPELINE_MONTH', 1)) # Bulan eksekusi
-MAE_TARGET = 0.0000002                              # Kriteria batas batas penghentian MAE
+MAE_TARGET = 0.000002                              # Kriteria batas penghentian MAE
 MAX_EPOCHS = 10000                                  # Maksimum iterasi epoch
 NUM_BASIS = [4**2, 8**2, 16**2]                     # Resolusi basis RBF (16, 64, 256)
 ```
