@@ -120,6 +120,10 @@ $$
 
 using the Adam optimizer with a learning rate $\eta = 5 \times 10^{-4}$ and mini-batch size $B = 16$.
 
+![Figure: Interpreting DeepKriging Neural Network Architecture](deepkriging_architecture_model.png)
+
+*Figure 1: Interpreting the DeepKriging Neural Network Architecture. The input layer simultaneously ingests $p$ exogenous meteorological covariates $\mathbf{x} = [x_1, \dots, x_p]^T$ (latitude, longitude, OLR) and $K$ multi-resolution Wendland $C^2$ spatial basis function embeddings $\boldsymbol{\phi} = [\phi_1, \dots, \phi_K]^T$. Dense, fully connected hidden layers sequentially compress representations (64 $\to$ 32 $\to$ 16 units) before generating the continuous precipitation estimate $\hat{y}$ at the linear output layer.*
+
 ---
 
 ### 1.5 DeepKriging Theoretical Architecture Flowchart
@@ -171,7 +175,7 @@ flowchart TD
     YHat --> Rescale --> Field
 ```
 
-*Figure 1: Conceptual Geostatistical Architecture of the Hybrid DeepKriging Framework.*
+*Figure 2: Conceptual Geostatistical Architecture of the Hybrid DeepKriging Framework.*
 
 ---
 
@@ -304,7 +308,7 @@ flowchart TD
     SavePred --> End(["End: Process Complete"]):::term
 ```
 
-*Figure 2: Computational Pipeline and Algorithmic Execution Flowchart (`kode2026_1var_recordloss5_newbasis.py`).*
+*Figure 3: Computational Pipeline and Algorithmic Execution Flowchart (`kode2026_1var_recordloss5_newbasis.py`).*
 
 ---
 
